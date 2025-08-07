@@ -3,6 +3,7 @@
 #include <cmath>
 #include <fstream>
 #include <functional>
+#include <cmath>  // pour fabs()
 using namespace std;
 
 enum Color { RED, BLACK };
@@ -317,11 +318,123 @@ public:
         }
     }
 
-    double eval(double x) {
+    double eval_in(double x) {
         double result = 0.0;
         evalHelper(root, x, result);
         return result;
     }
+
+
+
+
+
+    const double EPSILON = 1e-8;
+    
+
+    
+    void accumulateUpTo(Node* node, double x, double& sum) {
+        if (!node) return;
+        if (node->data.x > x + EPSILON) {
+            accumulateUpTo(node->left, x, sum);
+        } else {
+            accumulateUpTo(node->left, x, sum);
+            sum += node->data.deltaY;
+            accumulateUpTo(node->right, x, sum);
+        }
+    }
+    
+    void findBoundingNodes(Node* node, double x, Node*& left, Node*& right) {
+        while (node) {
+            if (fabs(x - node->data.x) < EPSILON) {
+                left = node;
+                right = nullptr;
+                return;
+            } else if (x < node->data.x) {
+                right = node;
+                node = node->left;
+            } else {
+                left = node;
+                node = node->right;
+            }
+        }
+    }
+    
+    double eval(double x) {
+        if (!root) return 0.0;
+    
+        double sum = 0.0;
+        accumulateUpTo(root, x, sum);
+    
+        Node* left = nullptr;
+        Node* right = nullptr;
+        findBoundingNodes(root, x, left, right);
+    
+        if (!right) {
+            // x ≈ xi exact match, or x > max
+            return sum;
+        }
+    
+        if (fabs(x - right->data.x) < EPSILON) {
+            // x ≈ x{i+1}, ajouter son deltaY complet
+            sum += right->data.deltaY;
+            return sum;
+        }
+    
+        if (left) {
+            double dx = right->data.x - left->data.x;
+            if (dx != 0.0) {
+                double fraction = (x - left->data.x) / dx;
+                sum += fraction * right->data.deltaY;
+            }
+        }
+    
+        return sum;
+    }
+    
+    void sum(const RedBlackTree<T>& g) {
+        function<void(typename RedBlackTree<T>::Node*)> process = [&](typename RedBlackTree<T>::Node* node) {
+            if (!node) return;
+            process(node->left);
+    
+            double x = node->data.x;
+            double deltaG = node->data.deltaY;
+    
+            Node* match = search(root, node->data);
+            std::cout<< "looking for a match !!" << std::endl;
+            if (match) {
+                std::cout<< "match trouve  !!" << std::endl;
+                 // Si x existe déjà dans f, on additionne les deltas
+                match->data.deltaY += deltaG;
+            } else {
+                // x n'existe pas dans f, calculer deltaF à x
+                std::cout<< "node not matched !!" << std::endl;
+                double y = this->eval(x);
+                std::cout<< "node not matched a !!" << std::endl;
+                
+                // Trouver le dernier point de f avant x (i.e., x_prev)
+                Node* left = nullptr;
+                Node* right = nullptr;
+                findBoundingNodes(root, x, left, right);
+                std::cout<< "node not matched b !!" << std::endl;
+    
+                double yPrev = left ? this->eval(left->data.x) : 0.0;
+                std::cout<< "node not matched c !!" << std::endl;
+                double deltaF = y - yPrev;
+                std::cout<< " eval f = " << y << std::endl;
+                std::cout<< " new delta  = " << y -yPrev << std::endl;
+                
+                double delta_sum =  deltaF + deltaG ;
+
+                this->insert({x, delta_sum});
+                std::cout<< "node not matched d !!" << std::endl;
+            }
+    
+            process(node->right);
+        };
+    
+        process(g.root);
+    }
+    
 
     void exportFunction(const string& filename) {
         vector<pair<double, double>> points;
@@ -348,7 +461,7 @@ public:
         }
 
         out.close();
-        cout << "Fonction exportée vers " << filename << endl;
+        cout << "Fonction exportee vers " << filename << endl;
     }
 
     void printTree() {
@@ -358,3 +471,5 @@ public:
             printHelper(root, "", true);
     }
 };
+
+

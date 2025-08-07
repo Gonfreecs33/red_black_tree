@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 
 X, Y = [], []
-with open("function.txt") as f:
+with open("rrr.txt") as f:
     for line in f:
         x, y = map(float, line.strip().split())
         X.append(x)

@@ -1,23 +1,48 @@
-#include  "piecewise_RBT.cpp"
+#include "rbt_new.cpp"
+
 int main() {
-    RedBlackTree<DeltaPoint> tree;
+    // Création de f : une fonction en escalier
+    // RedBlackTree<DeltaPoint> f;
+    // f.insert({0.0, 1.0});
+    // f.insert({7.0, 0.0});
+    RedBlackTree<DeltaPoint> f;
+    f.insert({1.0, 0});
+    f.insert({7.0, 0});
 
-    tree.insert({0.0, 2.0});
-    tree.insert({3.5, -1.0});
-    tree.insert({6.0, 2.5});
-    tree.insert({7.0, 0.0});
-    tree.insert({8.0, 0.0});
-    tree.insert({10.5, 1});
-    tree.insert({12, -1});
 
-    tree.printTree();
 
-    cout << "\nEvaluation de f(x) :\n";
-    cout << "f(0.0) = " << tree.eval(0.0) << endl;
-    cout << "f(4.0) = " << tree.eval(4.0) << endl;
-    cout << "f(6.0) = " << tree.eval(6.0) << endl;
+    // Création de g : une autre fonction en escalier
+    RedBlackTree<DeltaPoint> g;
+    g.insert({2.0, -1.0});
+    g.insert({2.5, 1.0});
+    g.insert({3.0, 1.5});
+    g.insert({5.0, -1.5});
+    g.insert({6.0, -6.5});
 
-    tree.exportFunction("function.txt");
+    g.minfunction(-0.5);
 
+    // Affichage des arbres
+    cout << "--- Arbre f ---\n";
+    f.printTree();
+
+    cout << "\n--- Arbre g ---\n";
+    g.printTree();
+    // g.negate();
+    // g.negate();
+    // f.minus(g);
+    
+
+ 
+    cout << "\n--- Arbre f + g ---\n";
+    f.printTree();
+
+    // Évaluation en quelques points
+    cout << "\n--- Évaluation de f + g ---\n";
+    vector<double> testPoints = {0.0, 1.5, 2, 2.33, 3.0, 4.33, 4.5 , 5.0, 6.0};
+
+    for (double x : testPoints) {
+        cout << "f+g(" << x << ") = " << g.eval(x) << endl;
+    }
+    g.exportFunction("rrr.txt");
     return 0;
 }
