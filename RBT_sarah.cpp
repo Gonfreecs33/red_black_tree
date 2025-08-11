@@ -50,6 +50,21 @@ private:
 
     Node* root;
 
+    Node* successor(Node* node) {
+        if (!node) return nullptr;
+        if (node->right) {
+            Node* curr = node->right;
+            while (curr->left) curr = curr->left;
+            return curr;
+        }
+        Node* parent = node->parent;
+        while (parent && node == parent->right) {
+            node = parent;
+            parent = parent->parent;
+        }
+        return parent;
+    }
+
     //  left rotation
     void leftRotate(Node* x) {
         if (x == nullptr || x->right == nullptr)
@@ -545,76 +560,71 @@ void negate(){
 
 void minfunction(double c){
 
-    // DeltaPoint zeroPt;
-    // zeroPt.deltaY = 0;
-    // zeroPt.x = 0;
-    // cout << " search coucouc" << endl;
-    // Node* zeroNode = search(root, zeroPt);
-    // cout << "post search coucouc" << endl;
-
-    // if (zeroNode) {
-    //     // Mise à jour de son delta en fonction de c
-    //     if(zeroNode->data.deltaY > c)  zeroNode->data.deltaY = c;
-    // } else {
-    //     // Calculer deltaY de départ (par ex. c directement)
-    //     double y = (c<0)? c:0;
-        
-    //     this->insert({0.0, y});
-    // }
-
-
-    
-    // // === Étape 2 : mettre à jour le dernier point ===
-    // Node* last = root;
-    // if (last) {
-    //     while (last->right) last = last->right;
-    //     if (last->data.deltaY > c) last->data.deltaY = c ;  // mise à jour en fonction de c
-    // } 
-
-// === Étape 1 : gérer le noeud x = 0.0 ===
+    // === Étape 1 : gérer le noeud x = 0.0 ===
     DeltaPoint zeroPt;
     zeroPt.deltaY = 0;
     zeroPt.x = 0;
+    double y_prev = 0;
     Node* zeroNode = search(root, zeroPt);
 
-if (zeroNode) {
-    if (zeroNode->data.deltaY > c)  zeroNode->data.deltaY = c;
-} else {
-    double y0 = (c < 0) ? c : 0; // règle pour le delta initial
-    insert({0.0, y0});
-    zeroNode = search(root, zeroPt); // on le récupère après insertion
-}
+    if (zeroNode) {
+        y_prev  =  zeroNode->data.deltaY;
+        if (zeroNode->data.deltaY > c)  zeroNode->data.deltaY = c;
+    } else {
 
-// === Mise à jour du nœud qui suit x = 0.0 ===
-Node* succ = zeroNode;
-if (succ) {
-    // Trouver le successeur (le plus petit x > 0.0)
-    if (succ->right) {
-        succ = succ->right;
-        while (succ->left) succ = succ->lef- ;
-        // ajustement du delta du suivant
-        cout << " successeur x :" <<  succ->data.x << endl;
-        succ->data.deltaY -= zeroNode->data.deltaY;
+        y_prev  = 0;
+        double y0 = (c < 0) ? c : 0; // règle pour le delta initial
+        this->insert({0.0, y0});
+        zeroNode = search(root, zeroPt); // on le récupère après insertion
     }
-}
-
-// // === Étape 2 : gérer le dernier nœud ===
-// Node* last = root;
-// Node* prev = nullptr;
-// if (last) {
-//     while (last->right) {
-//         prev = last;
-//         last = last->right;
-//     }
-//     // ajuster le delta du dernier en fonction de prev et c
-//     if (prev) {
-//         double yPrev = eval(prev->data.x); // valeur avant dernier
-//         double newDelta = c - yPrev;
-//         last->data.deltaY = newDelta;
-//     }
-// }
 
 
+    double xprev = zeroNode->data.x;
+    cout<< xprev << endl;
+    // Trouver le dernier point de f avant x (i.e., x_prev)
+
+    // === Trouver le nœud suivant (qui est apres x = 0.0) et le mettre a jour ===
+    Node* right = successor(zeroNode);
+    //cout << "fist case zero node Visiting(current) x=" << right->data.x << ", deltaY=" << right->data.deltaY << ", currentY=" << this->eval_in(right->data.x)<< endl;
+
+    if(right){                        
+                bool prevabove = y_prev  > c ;
+                double x_current = right->data.x;
+                double y_current = y_prev + right->data.deltaY;
+                bool currunder =  y_current < c ;
+                cout << "fist case zero node Visiting(current) x=" << right->data.x << ", deltaY=" << right->data.deltaY << ", currentY=" << y_current<< endl;
+            //   cout << "Prev x=" << prevX << ", prevY=" << prevY<<  endl;
+
+                // Traversée de c ?
+                if ((prevabove && currunder)) {
+                    cout << "coupure found first node case" <<  endl;
+
+
+                    // Interpolation pour trouver l'intersection
+                    double t = (c - y_prev) / (y_current - y_prev);
+                    double xi = xprev + t * (x_current - xprev);
+                    double deltaAtXi =  0;
+                // cout << "Point de coupure x=" << xi << ", deltaXi=" <<deltaAtXi << endl;
+                    this->insert({xi, deltaAtXi});
+
+                    // Ajuster delta du nœud actuel
+                    double remainingDelta = y_current - c;
+                    right->data.deltaY = remainingDelta; 
+
+                }else{
+                    // Ajuster delta du nœud actuel
+                    cout << "pas de coupure" << endl;
+                    double newDelta = y_current - zeroNode->data.deltaY ;
+                    right->data.deltaY = newDelta ; 
+                }
+
+
+
+
+                } else { cout << " right n'a pas ete trouve , on est dans la merde gros" << endl;}
+
+
+   // === Commencer l'algo de la fonction min ===
     vector<Node*> toDelete;
     vector<DeltaPoint> toInsert;
     cout << "minfunction execution starts here"<< endl;
@@ -631,21 +641,24 @@ if (succ) {
         currentY += node->data.deltaY;
 
         if (prevNode) {
-            bool prevAbove = prevY > c + EPSILON;
-            bool currAbove = currentY > c + EPSILON;
+            bool prevAbove = prevY > c ;
+            bool currAbove = currentY > c ;
+            bool prevUnder = prevY < c ;
+            bool currUnder  = currentY < c ;
+
             cout << "Visiting(current) x=" << node->data.x << ", deltaY=" << node->data.deltaY << ", currentY=" << currentY << endl;
             cout << "Prev x=" << prevX << ", prevY=" << prevY<<  endl;
 
             // Traversée de c ?
-            if ((prevAbove && !currAbove) || (!prevAbove && currAbove)) {
+            if ((prevAbove && currUnder) || (prevUnder && currAbove)) {
                 cout << "coupure found" <<  endl;
 
                 // Interpolation pour trouver l'intersection
                 double t = (c - prevY) / (currentY - prevY);
                 double xi = prevX + t * (x - prevX);
-                double deltaAtXi = (prevY > c + EPSILON)? 0 : c - prevY;
-              cout << "Point de coupure x=" << xi << ", deltaXi=" <<deltaAtXi << endl;
-                toIns  ert.push_back({xi, deltaAtXi});
+                double deltaAtXi = (prevY >= c)? 0 : c - prevY;
+                cout << "Point de coupure x=" << xi << ", deltaXi=" <<deltaAtXi << endl;
+                toInsert.push_back({xi, deltaAtXi});
                // this->insert({xi, deltaAtXi});
 
 
@@ -659,7 +672,7 @@ if (succ) {
         }
 
         // Marquer les nœuds au-dessus de c pour suppression
-        if (currentY > c + EPSILON) {
+        if (currentY > c ) {
             cout << " deletion to be done for " << "node : ("<< node->data.x <<" , "<< node->data.deltaY<< ")"<< endl;
             toDelete.push_back(node);
         }
