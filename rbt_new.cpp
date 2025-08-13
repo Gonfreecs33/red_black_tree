@@ -25,7 +25,7 @@ struct DeltaPoint {
     }
 
     bool operator==(const DeltaPoint& other) const {
-        return fabs(x - other.x) < 1e-9;
+        return fabs(x - other.x) < EPSILON;
     }
 };
 
@@ -270,6 +270,15 @@ private:
         }
     }
 
+    Node* search(Node* node, const T& key) {
+        if (!node || fabs(node->data.x - key.x)< EPSILON)
+            return node;
+        if (key < node->data)
+            return search(node->left, key);
+        else
+            return search(node->right, key);
+    }
+
 public:
     // Constructor: Initialize Red-Black Tree
     RedBlackTree()
@@ -303,7 +312,7 @@ public:
         fixInsert(node);
     }
 
-    // Public function: Remove a value from Red-Black Tree
+
     void remove(T key)
     {
         Node* node = root;
@@ -361,6 +370,7 @@ public:
             fixDelete(x);
         }
     }
+
 
     // Public function: Print the Red-Black Tree
     void printTree()
@@ -446,14 +456,7 @@ double eval(double x) {
     return sum;
 }
 
-Node* search(Node* node, const T& key) {
-    if (!node || fabs(node->data.x - key.x)< EPSILON)
-        return node;
-    if (key < node->data)
-        return search(node->left, key);
-    else
-        return search(node->right, key);
-}
+
 
 
 void sum(const RedBlackTree<T>& g) {

@@ -362,13 +362,13 @@ int main()
     rbtree.insert(7);
     rbtree.insert(3);
     rbtree.insert(18);
-    rbtree.insert(10);
-    rbtree.insert(22);
-    rbtree.insert(8);
+    // rbtree.insert(10);
+    // rbtree.insert(22);
+    // rbtree.insert(8);
     rbtree.insert(11);
-    rbtree.insert(26);
-    rbtree.insert(2);
-    rbtree.insert(6);
+    // rbtree.insert(26);
+    // rbtree.insert(2);
+    // rbtree.insert(6);
 
     // Printing Red-Black Tree
     rbtree.printTree();
@@ -385,6 +385,25 @@ int main()
     cout << "After deleting 3:" << endl;
     rbtree.remove(3);
     rbtree.printTree();
+
+
+
+
+
+    // RedBlackTree<int> g;
+    // g.insert(2);
+    // g.insert(4);
+    // g.insert(3);
+    // g.insert(5);
+
+    // g.remove(5);
+    // g.remove(5);
+
+
+
+
+
+
 
     return 0;
 }
