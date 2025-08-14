@@ -11,6 +11,10 @@ const double EPSILON = 1e-4;
 using namespace std;
 
 
+double roundToMilli(double value) {
+    return std::round(value * 1000.0) / 1000.0;
+}
+
 enum Color { RED, BLACK };
 
 struct DeltaPoint {
@@ -392,22 +396,32 @@ public:
     }
 
 // delete a node by value
-    void remove(T val) {
-        Node* z = root;
-        while (z != nullptr) {
-            if (val < z->data)
-                z = z->left;
-            else if (val > z->data)
-                z = z->right;
-            else {
-                deleteNode(z);
-                std::cout << "Node with value " << val.x << " remove from the tree." << std::endl;
-                return;
-            }
-        }
-        std::cout << "Node with value " << val.x << " not found in the tree." << std::endl;
-    }
+    // void remove(T val) {
+    //     Node* z = root;
+    //     while (z != nullptr) {
+    //         if (val < z->data)
+    //             z = z->left;
+    //         else if (val > z->data)
+    //             z = z->right;
+    //         else {
+    //             deleteNode(z);
+    //             std::cout << "Node with value " << val.x << " remove from the tree." << std::endl;
+    //             return;
+    //         }
+    //     }
+    //     std::cout << "Node with value " << val.x << " not found in the tree." << std::endl;
+    // }
 
+    void remove(const T& val) {
+        Node* z = search(root, val); // utilise operator== (EPSILON)
+        if (z) {
+            deleteNode(z);
+            std::cout << "Node with value " << val.x << " remove from the tree." << std::endl;
+        } else {
+            std::cout << "Node with value " << val.x << " not found in the tree." << std::endl;
+        }
+    }
+    
     // // print the tree structure
     // void printTree() {
     //     printHelper(root, 0);
@@ -743,9 +757,151 @@ void minfunction(double c){
 }
 
 
-void maxfunction(double c) {
-    cout << "=== Début maxfunction avec c=" << c << " ===" << endl;
+// void maxfunction(double c) {
+//     cout << "=== Début maxfunction avec c=" << c << " ===" << endl;
 
+//     // === Étape 1 : gérer le noeud x = 0.0 ===
+//     DeltaPoint zeroPt;
+//     zeroPt.deltaY = 0;
+//     zeroPt.x = 0;
+//     double y_prev = 0;
+//     Node* zeroNode = search(root, zeroPt);
+
+//     if (zeroNode) {
+//         cout << "Noeud x=0 trouvé: deltaY=" << zeroNode->data.deltaY << endl;
+//         y_prev = zeroNode->data.deltaY;
+//         if (zeroNode->data.deltaY < c) {
+//             cout << "Mise à jour deltaY du noeud x=0 de " << zeroNode->data.deltaY << " vers " << c << endl;
+//             zeroNode->data.deltaY = c;
+//         }
+//     } else {
+//         cout << "Noeud x=0 introuvable, insertion..." << endl;
+//         y_prev = 0;
+//         double y0 = (c > 0) ? c : 0; // règle pour le delta initial
+//         cout << "Insertion de (0, " << y0 << ")" << endl;
+//         this->insert({0.0, y0});
+//         zeroNode = search(root, zeroPt);
+//     }
+
+//     double xprev = zeroNode->data.x;
+//     Node* right = successor(zeroNode);
+
+//     if (right) {
+//         cout << "Successeur de x=0 : x=" << right->data.x << ", deltaY=" << right->data.deltaY << endl;
+//         bool prevBelow = y_prev < c;
+//         double x_current = right->data.x;
+//         double y_current = y_prev + right->data.deltaY;
+//         bool currAbove = y_current > c;
+
+//         cout << "prevBelow=" << prevBelow << ", currAbove=" << currAbove
+//              << ", y_prev=" << y_prev << ", y_current=" << y_current << endl;
+
+//         if ((prevBelow && currAbove)) {
+//             cout << "Coupure détectée entre x=" << xprev << " et x=" << x_current << endl;
+//             double t = (c - y_prev) / (y_current - y_prev);
+//             double xi = xprev + t * (x_current - xprev);
+//             cout << "Interpolation: t=" << t << ", xi=" << xi << endl;
+//             double deltaAtXi = 0;
+//             this->insert({xi, deltaAtXi});
+//             cout << "Insertion du point d'intersection (" << xi << ", " << deltaAtXi << ")" << endl;
+//             double remainingDelta = y_current - c;
+//             right->data.deltaY = remainingDelta;
+//             cout << "Mise à jour deltaY du successeur vers " << remainingDelta << endl;
+//         } else {
+//             double newDelta = y_current - zeroNode->data.deltaY;
+//             cout << "Pas de coupure, mise à jour deltaY du successeur vers " << newDelta << endl;
+//             right->data.deltaY = newDelta;
+//         }
+//     } else {
+//         cout << "Pas de successeur trouvé pour x=0" << endl;
+//     }
+    
+//     this->printTree();
+//     // === Algo principal ===
+//     cout << "=== Parcours infixe de l'arbre ===" << endl;
+//     vector<DeltaPoint> toDeleteValues;
+//     vector<DeltaPoint> toInsert;
+//     Node* prevNode = nullptr;
+//     double prevX = 0.0;
+//     double prevY = 0.0;
+//     double currentY = 0.0;
+
+//     function<void(Node*)> inorder = [&](Node* node) {
+//         if (!node) return;
+//         inorder(node->left);
+          
+//         double x = node->data.x;
+//         currentY += node->data.deltaY;
+//         this->printTree();
+//         cout << "Visite: x=" << x << ", deltaY=" << node->data.deltaY
+//              << ", currentY=" << currentY << endl;
+
+//         if (prevNode) {
+//             bool prevBelow = prevY < c;
+//             bool currBelow = currentY < c;
+//             bool prevAbove = prevY > c;
+//             bool currAbove = currentY > c;
+
+//             cout << "   Comparaison: prevBelow=" << prevBelow
+//                  << ", currAbove=" << currAbove
+//                  << ", prevAbove=" << prevAbove
+//                  << ", currBelow=" << currBelow << endl;
+
+//             if ((prevBelow && currAbove) || (prevAbove && currBelow)) {
+//                 cout << "   ↳ Coupure détectée entre x=" << prevX << " et x=" << x << endl;
+//                 double t = (c - prevY) / (currentY - prevY);
+//                 double xi = roundToMilli(prevX + t * (x - prevX));
+//                 double deltaAtXi = (prevY <= c) ? 0 : c - prevY;
+//                 cout << "     Interpolation: t=" << t << ", xi=" << xi
+//                      << ", deltaAtXi=" << deltaAtXi << endl;
+//                 toInsert.push_back({xi, deltaAtXi});
+
+//                 if (prevBelow && currAbove) {
+//                     double remainingDelta = currentY - c;
+//                     node->data.deltaY = remainingDelta;
+//                     cout << "     Mise à jour deltaY du noeud courant vers " << remainingDelta << endl;
+//                 }
+//             }
+
+//             if (prevBelow && currentY == c) {
+//                 cout << "   ↳ Plateau à c détecté, mise à zéro deltaY du noeud" << endl;
+//                 node->data.deltaY = 0;
+//                 currentY = c;
+//             }
+//         }
+
+//         if (currentY < c) {
+//             cout << "   ↳ Marquage pour suppression: (" << node->data.x << ", " << node->data.deltaY << ")" << endl;
+//             toDeleteValues.push_back(node->data);
+//         }
+
+//         prevNode = node;
+//         prevX = x;
+//         prevY = currentY;
+
+//         inorder(node->right);
+//     };
+
+//     inorder(root);
+
+//     cout << "=== Suppression des noeuds marqués ===" << endl;
+//     for (auto& val : toDeleteValues) {
+//         cout << "Suppression: (" << val.x << ", " << val.deltaY << ")" << endl;
+//         remove(val);
+//     }
+
+
+//     cout << "=== Insertion des points détectés ===" << endl;
+//     for (auto& pt : toInsert) {
+//         cout << "Insertion: (" << pt.x << ", " << pt.deltaY << ")" << endl;
+//         insert(pt);
+//     }
+
+
+//     cout << "=== Fin maxfunction ===" << endl;
+// }
+
+void maxfunction(double c) {
     // === Étape 1 : gérer le noeud x = 0.0 ===
     DeltaPoint zeroPt;
     zeroPt.deltaY = 0;
@@ -754,17 +910,11 @@ void maxfunction(double c) {
     Node* zeroNode = search(root, zeroPt);
 
     if (zeroNode) {
-        cout << "Noeud x=0 trouvé: deltaY=" << zeroNode->data.deltaY << endl;
         y_prev = zeroNode->data.deltaY;
-        if (zeroNode->data.deltaY < c) {
-            cout << "Mise à jour deltaY du noeud x=0 de " << zeroNode->data.deltaY << " vers " << c << endl;
-            zeroNode->data.deltaY = c;
-        }
+        if (zeroNode->data.deltaY < c) zeroNode->data.deltaY = c;
     } else {
-        cout << "Noeud x=0 introuvable, insertion..." << endl;
         y_prev = 0;
         double y0 = (c > 0) ? c : 0; // règle pour le delta initial
-        cout << "Insertion de (0, " << y0 << ")" << endl;
         this->insert({0.0, y0});
         zeroNode = search(root, zeroPt);
     }
@@ -773,38 +923,26 @@ void maxfunction(double c) {
     Node* right = successor(zeroNode);
 
     if (right) {
-        cout << "Successeur de x=0 : x=" << right->data.x << ", deltaY=" << right->data.deltaY << endl;
         bool prevBelow = y_prev < c;
         double x_current = right->data.x;
         double y_current = y_prev + right->data.deltaY;
         bool currAbove = y_current > c;
 
-        cout << "prevBelow=" << prevBelow << ", currAbove=" << currAbove
-             << ", y_prev=" << y_prev << ", y_current=" << y_current << endl;
-
         if ((prevBelow && currAbove)) {
-            cout << "Coupure détectée entre x=" << xprev << " et x=" << x_current << endl;
             double t = (c - y_prev) / (y_current - y_prev);
             double xi = xprev + t * (x_current - xprev);
-            cout << "Interpolation: t=" << t << ", xi=" << xi << endl;
             double deltaAtXi = 0;
             this->insert({xi, deltaAtXi});
-            cout << "Insertion du point d'intersection (" << xi << ", " << deltaAtXi << ")" << endl;
             double remainingDelta = y_current - c;
             right->data.deltaY = remainingDelta;
-            cout << "Mise à jour deltaY du successeur vers " << remainingDelta << endl;
         } else {
             double newDelta = y_current - zeroNode->data.deltaY;
-            cout << "Pas de coupure, mise à jour deltaY du successeur vers " << newDelta << endl;
             right->data.deltaY = newDelta;
         }
-    } else {
-        cout << "Pas de successeur trouvé pour x=0" << endl;
     }
 
     // === Algo principal ===
-    cout << "=== Parcours infixe de l'arbre ===" << endl;
-    vector<DeltaPoint> toDeleteValues;
+    vector<Node*> toDelete;
     vector<DeltaPoint> toInsert;
     Node* prevNode = nullptr;
     double prevX = 0.0;
@@ -818,47 +956,33 @@ void maxfunction(double c) {
         double x = node->data.x;
         currentY += node->data.deltaY;
 
-        cout << "Visite: x=" << x << ", deltaY=" << node->data.deltaY
-             << ", currentY=" << currentY << endl;
-
         if (prevNode) {
             bool prevBelow = prevY < c;
             bool currBelow = currentY < c;
             bool prevAbove = prevY > c;
             bool currAbove = currentY > c;
 
-            cout << "   Comparaison: prevBelow=" << prevBelow
-                 << ", currAbove=" << currAbove
-                 << ", prevAbove=" << prevAbove
-                 << ", currBelow=" << currBelow << endl;
-
             if ((prevBelow && currAbove) || (prevAbove && currBelow)) {
-                cout << "   ↳ Coupure détectée entre x=" << prevX << " et x=" << x << endl;
                 double t = (c - prevY) / (currentY - prevY);
                 double xi = prevX + t * (x - prevX);
                 double deltaAtXi = (prevY <= c) ? 0 : c - prevY;
-                cout << "     Interpolation: t=" << t << ", xi=" << xi
-                     << ", deltaAtXi=" << deltaAtXi << endl;
                 toInsert.push_back({xi, deltaAtXi});
 
                 if (prevBelow && currAbove) {
                     double remainingDelta = currentY - c;
                     node->data.deltaY = remainingDelta;
-                    cout << "     Mise à jour deltaY du noeud courant vers " << remainingDelta << endl;
                     currentY = c + remainingDelta;
                 }
             }
 
             if (prevBelow && currentY == c) {
-                cout << "   ↳ Plateau à c détecté, mise à zéro deltaY du noeud" << endl;
                 node->data.deltaY = 0;
                 currentY = c;
             }
         }
 
         if (currentY < c) {
-            cout << "   ↳ Marquage pour suppression: (" << node->data.x << ", " << node->data.deltaY << ")" << endl;
-            toDeleteValues.push_back(node->data);
+            toDelete.push_back(node);
         }
 
         prevNode = node;
@@ -870,121 +994,15 @@ void maxfunction(double c) {
 
     inorder(root);
 
-    cout << "=== Insertion des points détectés ===" << endl;
+
+    for (Node* node : toDelete) {
+        remove(node->data);
+    }
     for (auto& pt : toInsert) {
-        cout << "Insertion: (" << pt.x << ", " << pt.deltaY << ")" << endl;
         insert(pt);
     }
 
-    cout << "=== Suppression des noeuds marqués ===" << endl;
-    for (auto& val : toDeleteValues) {
-        cout << "Suppression: (" << val.x << ", " << val.deltaY << ")" << endl;
-        remove(val);
-    }
-
-    cout << "=== Fin maxfunction ===" << endl;
 }
-
-// void maxfunction(double c) {
-//     // === Étape 1 : gérer le noeud x = 0.0 ===
-//     DeltaPoint zeroPt;
-//     zeroPt.deltaY = 0;
-//     zeroPt.x = 0;
-//     double y_prev = 0;
-//     Node* zeroNode = search(root, zeroPt);
-
-//     if (zeroNode) {
-//         y_prev = zeroNode->data.deltaY;
-//         if (zeroNode->data.deltaY < c) zeroNode->data.deltaY = c;
-//     } else {
-//         y_prev = 0;
-//         double y0 = (c > 0) ? c : 0; // règle pour le delta initial
-//         this->insert({0.0, y0});
-//         zeroNode = search(root, zeroPt);
-//     }
-
-//     double xprev = zeroNode->data.x;
-//     Node* right = successor(zeroNode);
-
-//     if (right) {
-//         bool prevBelow = y_prev < c;
-//         double x_current = right->data.x;
-//         double y_current = y_prev + right->data.deltaY;
-//         bool currAbove = y_current > c;
-
-//         if ((prevBelow && currAbove)) {
-//             double t = (c - y_prev) / (y_current - y_prev);
-//             double xi = xprev + t * (x_current - xprev);
-//             double deltaAtXi = 0;
-//             this->insert({xi, deltaAtXi});
-//             double remainingDelta = y_current - c;
-//             right->data.deltaY = remainingDelta;
-//         } else {
-//             double newDelta = y_current - zeroNode->data.deltaY;
-//             right->data.deltaY = newDelta;
-//         }
-//     }
-
-//     // === Algo principal ===
-//     vector<Node*> toDelete;
-//     vector<DeltaPoint> toInsert;
-//     Node* prevNode = nullptr;
-//     double prevX = 0.0;
-//     double prevY = 0.0;
-//     double currentY = 0.0;
-
-//     function<void(Node*)> inorder = [&](Node* node) {
-//         if (!node) return;
-//         inorder(node->left);
-
-//         double x = node->data.x;
-//         currentY += node->data.deltaY;
-
-//         if (prevNode) {
-//             bool prevBelow = prevY < c;
-//             bool currBelow = currentY < c;
-//             bool prevAbove = prevY > c;
-//             bool currAbove = currentY > c;
-
-//             if ((prevBelow && currAbove) || (prevAbove && currBelow)) {
-//                 double t = (c - prevY) / (currentY - prevY);
-//                 double xi = prevX + t * (x - prevX);
-//                 double deltaAtXi = (prevY <= c) ? 0 : c - prevY;
-//                 toInsert.push_back({xi, deltaAtXi});
-
-//                 if (prevBelow && currAbove) {
-//                     double remainingDelta = currentY - c;
-//                     node->data.deltaY = remainingDelta;
-//                     currentY = c + remainingDelta;
-//                 }
-//             }
-
-//             if (prevBelow && currentY == c) {
-//                 node->data.deltaY = 0;
-//                 currentY = c;
-//             }
-//         }
-
-//         if (currentY < c) {
-//             toDelete.push_back(node);
-//         }
-
-//         prevNode = node;
-//         prevX = x;
-//         prevY = currentY;
-
-//         inorder(node->right);
-//     };
-
-//     inorder(root);
-
-//     for (auto& pt : toInsert) {
-//         insert(pt);
-//     }
-//     for (Node* node : toDelete) {
-//         remove(node->data);
-//     }
-// }
 
 RedBlackTree<DeltaPoint> maxWithC(double c) const {
     RedBlackTree<DeltaPoint> copy;
@@ -999,6 +1017,33 @@ RedBlackTree<DeltaPoint> minWithC(double c) const {
     copy = *this;
     copy.minfunction(c);
     return copy;
+}
+
+
+bool isLessOrEqual(const RedBlackTree<T>& f, const RedBlackTree<T>& g) {
+    bool result = true;
+
+    // fonction récursive pour parcourir les points de g
+    function<void(typename RedBlackTree<T>::Node*)> checkNode = [&](typename RedBlackTree<T>::Node* node) {
+        if (!node || !result) return; // arrêter si déjà faux
+
+        checkNode(node->left);
+
+        double x = node->data.x;
+        double gx = g.eval(x);
+        double fx = f.eval(x);
+
+        if (fx - gx > EPSILON) { // si f(x) > g(x)
+            result = false;
+            return;
+        }
+
+        checkNode(node->right);
+    };
+
+    checkNode(g.root); // parcourir tous les points de g
+
+    return result;
 }
 
 
