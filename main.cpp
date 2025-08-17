@@ -1,4 +1,7 @@
 #include "RBT_sarah.cpp"
+#include <iostream>
+
+
 
 int main() {
     // Création de f : une fonction en escalier
@@ -6,36 +9,32 @@ int main() {
     // f.insert({0.0, 1.0});
     // f.insert({7.0, 0.0});
     RedBlackTree<DeltaPoint> f;
+    f.insert({1.0, 0});
+    f.insert({7.0, -5});
 
 
 
-    
-    RedBlackTree<DeltaPoint> g;
-  //  g.insert({0.0, 2.0});    // départ au-dessus
-    g.insert({1.0, -3.0});   // descend
-    g.insert({2.0, 4.0});    // remonte
-    g.insert({2.5, -4.0});   // redescend
-    g.insert({3.0, 1.5});    // remonte
-    g.insert({4.0, -1.0});   // descend
-    g.insert({5.0, 5.0});    // saute haut
-    g.insert({6.0, -6.0});   // descend fort
+    // Création de g : une autre fonction en escalier
+   // RedBlackTree<DeltaPoint> g;
+    // g.insert({2.0, -1.0});
+    // g.insert({2.5, 1.0});
+    // g.insert({3.0, 1.5});
+    // g.insert({5.0, -1.5});
+    // g.insert({6.0, -6.5});
 
+    auto g = cba_profile(-5, 2, 3.5);
 
-      //g.remove({2.5, 1.0});
-     //  g.remove({3.0, 1.5});
-     // g.remove({5.0, -1.5});
+    bool t = g.isLessOrEqual(f);
 
+    g.update_cbr_stmin(5, 6, 10, -3, -3);
 
-    cout << "\n--- Arbre g ---\n";
-    g.printTree();
-    
-    f = g.maxWithC(-1);
+    cout << " g plus petit que f ?  "<< t << endl;
 
-   // g.minfunction(-1);
-
+  //  g.minfunction(-20);
+    cout <<"g.evaluate_min()= " << g.evaluate_max(3,3) << endl;
     // Affichage des arbres
-    // cout << "--- Arbre f ---\n";
-    // f.printTree();
+    cout << "--- Arbre f ---\n";
+    f.printTree();
 
     cout << "\n--- Arbre g ---\n";
     g.printTree();
@@ -50,11 +49,11 @@ int main() {
 
     // Évaluation en quelques points
     cout << "\n--- Évaluation de f + g ---\n";
-    vector<double> testPoints = {0.0, 1, 2, 2.5, 3.0, 4, 4.5 , 5.0, 6.0};
+    vector<double> testPoints = {0.0, 1.5, 2, 2.33, 3.0, 4.33, 4.5 , 5.0, 6.0};
 
     for (double x : testPoints) {
-        cout << "f(" << x << ") = " << f.eval(x) << endl;
+        cout << "f+g(" << x << ") = " << g.eval(x) << endl;
     }
-    f.exportFunction("rrr.txt");
+    g.exportFunction("rrr.txt");
     return 0;
 }

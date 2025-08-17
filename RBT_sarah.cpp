@@ -38,6 +38,14 @@ struct DeltaPoint {
     }
 };
 
+
+template <typename T> class RedBlackTree;
+
+RedBlackTree<DeltaPoint> delta_profile(double gap, double a, double b, double c);
+RedBlackTree<DeltaPoint> cba_profile(double cap, double a, double b);
+
+
+
 template <typename T> class RedBlackTree  {
 private:
 
@@ -439,7 +447,7 @@ double eval_in(double x) {
 
 
 
-void accumulateUpTo(Node* node, double x, double& sum) {
+void accumulateUpTo(Node* node, double x, double& sum) const{
     if (!node) return;
     if (node->data.x > x + EPSILON) {
         accumulateUpTo(node->left, x, sum);
@@ -450,7 +458,7 @@ void accumulateUpTo(Node* node, double x, double& sum) {
     }
 }
 
-void findBoundingNodes(Node* node, double x, Node*& left, Node*& right) {
+void findBoundingNodes(Node* node, double x, Node*& left, Node*& right) const{
     while (node) {
         if (fabs(x - node->data.x) < EPSILON) {
             left = node;
@@ -466,7 +474,7 @@ void findBoundingNodes(Node* node, double x, Node*& left, Node*& right) {
     }
 }
 
-double eval(double x) {
+double eval(double x) const {
     if (!root) return 0.0;
 
     double sum = 0.0;
@@ -497,6 +505,10 @@ double eval(double x) {
 
     return sum;
 }
+
+
+
+
 
 
 
@@ -1020,33 +1032,242 @@ RedBlackTree<DeltaPoint> minWithC(double c) const {
 }
 
 
-bool isLessOrEqual(const RedBlackTree<T>& f, const RedBlackTree<T>& g) {
+bool isLessOrEqual(const RedBlackTree<T>& g) {
+    // On calcule diff = g - f
+    RedBlackTree<DeltaPoint> diff = g;
+    diff.minus(*this);
+
     bool result = true;
 
-    // fonction récursive pour parcourir les points de g
+    // Parcours récursif en ordre croissant
     function<void(typename RedBlackTree<T>::Node*)> checkNode = [&](typename RedBlackTree<T>::Node* node) {
         if (!node || !result) return; // arrêter si déjà faux
 
         checkNode(node->left);
 
-        double x = node->data.x;
-        double gx = g.eval(x);
-        double fx = f.eval(x);
+        double x = node->data.x;         // on prend la position x du noeud courant
+        double diff_eval = diff.eval(x); // valeur de g(x) - f(x)
 
-        if (fx - gx > EPSILON) { // si f(x) > g(x)
+        if (diff_eval < 0) {      // si jamais g(x) < f(x)
             result = false;
-            return;
+            return; // on arrête
         }
 
         checkNode(node->right);
     };
 
-    checkNode(g.root); // parcourir tous les points de g
+    checkNode(diff.root);
 
     return result;
 }
 
+//=================================================================================================================
+//====================================== Eval min/max sur un interval==============================================
+//=================================================================================================================
 
+double evaluate_max(double t_inf, double t_sup) const {
+    if (!root || t_inf > t_sup) return 0.0;
+    
+    double a = this->eval(t_inf); double b = this->eval(t_sup);
+    double maxVal = std::max(a, b); // bornes
+
+    // parcours infixe de l'arbre
+    function<void(Node*)> inorder = [&](Node* node) {
+        if (!node) return;
+        inorder(node->left);
+
+        double x = node->data.x;
+        if (x >= t_inf  && x <= t_sup ) {
+            double val = this->eval(x);
+            if (val > maxVal) maxVal = val;
+        }
+
+        inorder(node->right);
+    };
+
+    inorder(root);
+
+    return maxVal;
+}
+
+
+double evaluate_min(double t_inf, double t_sup) const {
+    if (!root || t_inf > t_sup) return 0.0;
+    
+    double a = this->eval(t_inf); double b = this->eval(t_sup);
+    double minVal = std::min(a, b); // bornes
+
+    // parcours infixe de l'arbre
+    function<void(Node*)> inorder = [&](Node* node) {
+        if (!node) return;
+        inorder(node->left);
+
+        double x = node->data.x;
+        if (x >= t_inf  && x <= t_sup ) {
+            double val = this->eval(x);
+            if (val < minVal) minVal = val;
+        }
+
+        inorder(node->right);
+    };
+
+    inorder(root);
+
+    return minVal;
+}
+
+
+
+//============================================================================
+//==================== Update total contribution (min & max) =================
+//============================================================================
+
+void update_cbr_stmin(double stmin_old, double stmin, 
+                                double ctmin, double cap_min, 
+                                double cap_max) 
+{
+    double cap = (cap_min > 0) ? cap_max : cap_min;
+
+    if (std::abs(stmin - stmin_old) < 1e-6)
+        return;
+
+    RedBlackTree<DeltaPoint> delta;
+
+    // Case (1)
+    if (stmin_old < stmin && stmin < ctmin) {
+        double slope = -cap / (ctmin - stmin_old);
+        double gap = slope * (stmin - stmin_old);
+        delta = delta_profile(gap, stmin_old, stmin, ctmin);
+    }
+    // Case (2)
+    else if (stmin_old <= ctmin && ctmin < stmin) {
+        double gap = -cap;
+        delta = delta_profile(gap, stmin_old, ctmin, stmin);
+    }
+    // Case (3)
+    else if (ctmin < stmin_old && stmin_old < stmin) {
+        double slope = -cap / (ctmin - stmin);
+        double gap = slope * (stmin_old - stmin);
+        delta = delta_profile(gap, ctmin, stmin_old, stmin);
+    }
+
+    this->sum(delta);
+}
+
+
+void update_cbr_ctmin(double ctmin_old, double ctmin,
+                                double stmin, double cap_min,
+                                double cap_max) 
+{
+    double cap = (cap_min > 0) ? cap_max : cap_min;
+
+    if (std::abs(ctmin - ctmin_old) < 1e-6)
+        return;
+
+    RedBlackTree<DeltaPoint> delta;
+
+    // Case (4)
+    if (stmin < ctmin_old && ctmin_old < ctmin) {
+        double slope = -cap / (ctmin - stmin);
+        double gap = slope * (ctmin - ctmin_old);
+        delta = delta_profile(gap, stmin, ctmin_old, ctmin);
+    }
+    // Case (5)
+    else if (ctmin_old <= stmin && stmin < ctmin) {
+        double gap = -cap;
+        delta = delta_profile(gap, ctmin_old, stmin, ctmin);
+    }
+    // Case (6)
+    else if (ctmin_old < ctmin && ctmin < stmin) {
+        double slope = -cap / (ctmin_old - stmin);
+        double gap = slope * (ctmin_old - ctmin);
+        delta = delta_profile(gap, ctmin_old, ctmin, stmin);
+    }
+
+    this->sum(delta);
+}
+
+
+void update_cbr_stmax(double stmax_old, double stmax,
+                            double ctmax, double cap_min,
+                            double cap_max) 
+{
+    double cap = (cap_min > 0) ? cap_min : cap_max;
+
+    if (std::abs(stmax - stmax_old) < 1e-6)
+        return;
+
+    RedBlackTree<DeltaPoint> delta;
+
+    // Case (7)
+    if (stmax < stmax_old && stmax_old < ctmax) {
+        double slope = cap / (ctmax - stmax);
+        double gap = slope * (stmax_old - stmax);
+        delta = delta_profile(gap, stmax, stmax_old, ctmax);
+    }
+    // Case (8)
+    else if (stmax <= ctmax && ctmax < stmax_old) {
+        double gap = cap;
+        delta = delta_profile(gap, stmax, ctmax, stmax_old);
+    }
+    // Case (9)
+    else if (ctmax < stmax && stmax < stmax_old) {
+        double slope = cap / (ctmax - stmax_old);
+        double gap = slope * (stmax - stmax_old);
+        delta = delta_profile(gap, ctmax, stmax, stmax_old);
+    }
+
+    this->sum(delta);
+}
+
+
+void update_cbr_ctmax(double ctmax_old, double ctmax,
+                                double stmax, double cap_min,
+                                double cap_max) 
+{
+    double cap = (cap_min > 0) ? cap_min : cap_max;
+
+    if (std::abs(ctmax - ctmax_old) < 1e-6)
+        return;
+
+    RedBlackTree<DeltaPoint> delta;
+
+    // Case (10)
+    if (stmax < ctmax && ctmax < ctmax_old) {
+        double slope = cap / (ctmax_old - stmax);
+        double gap = slope * (ctmax_old - ctmax);
+        delta = delta_profile(gap, stmax, ctmax, ctmax_old);
+    }
+    // Case (11)
+    else if (ctmax <= stmax && stmax < ctmax_old) {
+        double gap = cap;
+        delta = delta_profile(gap, ctmax, stmax, ctmax_old);
+    }
+    // Case (12)
+    else if (ctmax < ctmax_old && ctmax_old < stmax) {
+        double slope = cap / (ctmax - stmax);
+        double gap = slope * (ctmax - ctmax_old);
+        delta = delta_profile(gap, ctmax, ctmax_old, stmax);
+    }
+
+    this->sum(delta);
+}
+
+
+void update_cbr_cap(double cap_old, double cap, double start, double end) 
+{
+    if (std::abs(cap - cap_old) < 1e-6)
+        return;
+
+    double gap = cap - cap_old;
+    RedBlackTree<DeltaPoint> delta = cba_profile(gap, start, end);
+
+    this->sum(delta);
+}
+
+//============================================================================
+//==================== methode annexe pour =================
+//============================================================================
 
 void exportFunction(const string& filename) {
     vector<pair<double, double>> points;
@@ -1085,3 +1306,30 @@ void exportFunction(const string& filename) {
             printHelper(root, "", true);
     }
 };
+
+
+
+//=================================================================================================================
+//======================================  Construction profile delta function =====================================
+//=================================================================================================================
+
+RedBlackTree<DeltaPoint> delta_profile(double gap, double a, double b , double c) {
+    RedBlackTree<DeltaPoint> delta;
+//    delta.insert({0, 0});      // départ
+    delta.insert({a, 0});      // reste à 0
+    delta.insert({b, gap});    // monte à gap
+    delta.insert({c, -gap});      // redescend à 0
+//    delta.insert({horizon, 0}); // plateau final à 0
+    return delta;
+}
+
+RedBlackTree<DeltaPoint> cba_profile(double cap, double a, double b) {
+    RedBlackTree<DeltaPoint> cba;
+
+  //  cba.insert({0, 0});        // départ
+    cba.insert({a, 0});        // plateau à 0
+    cba.insert({b, cap});      // monte à cap
+   // cba.insert({horizon, cap}); // reste à cap
+    return cba;
+}
+
