@@ -78,7 +78,9 @@ public:
     double evaluate(double x) const {
         return eval(x);
     }
-
+//======================================================================================================
+//==========================              sum/minus f+g /f-g          ==================================
+//======================================================================================================
 
 // Addition de deux fonctions
     void sum(const PiecewiseLinearFunction& g) {
@@ -251,7 +253,9 @@ void minus(const PiecewiseLinearFunction& g) {
             pair.second = -pair.second;
         }
     }
-    
+//======================================================================================================
+//====================================== min(f, constante c) and max  ==================================
+//======================================================================================================
     void minfunction(double c) {
         std::cout << "--- minfunction start ---" << std::endl;
     
@@ -497,19 +501,23 @@ void minus(const PiecewiseLinearFunction& g) {
     }
     
     
-    
+//======================================================================================================
+//====================================== verify if f<= g  ==============================================
+//=======================================================================================================
     // Vérifie si la fonction est toujours inférieure ou égale à une autre
     bool isLessOrEqual(const PiecewiseLinearFunction& g) const {
         PiecewiseLinearFunction diff = g;
         diff.minus(*this);
         for (const auto& pair : diff.breakpoints) {
-            if (diff.evaluate(pair.first) < -EPSILON) {
+            if (diff.evaluate(pair.first) < 0) {
                 return false;
             }
         }
         return true;
     }
-
+//======================================================================================================
+//======================================  find min/max f in [tinf, tsup]   ==============================
+//=======================================================================================================
     // Évaluation du maximum sur un intervalle
     double evaluate_max(double t_inf, double t_sup) const {
         if (t_inf > t_sup) return evaluate(t_inf);
@@ -543,6 +551,9 @@ void minus(const PiecewiseLinearFunction& g) {
     }
 
 
+//=================================================================================================================
+//======================================  Construction profile delta function =====================================
+//=================================================================================================================
 
     
     // Fonctions de profil
@@ -560,7 +571,9 @@ void minus(const PiecewiseLinearFunction& g) {
         cba.addBreakpoint(b, cap);
         return cba;
     }
-
+//=================================================================================================================
+//======================================  utile pour print/draw python        =====================================
+//=================================================================================================================
     // Exportation des points vers un fichier
     void exportFunction(const std::string& filename) const {
         std::ofstream out(filename);
@@ -583,7 +596,9 @@ void minus(const PiecewiseLinearFunction& g) {
         out.close();
         std::cout << "Fonction exportee vers " << filename << std::endl;
     }
-
+//======================================================================================================
+//======================================  update global profile    =====================================
+//=======================================================================================================
     // Mise à jour de la fonction selon la méthode CBR
     void update_cbr_stmin(double stmin_old, double stmin, double ctmin, double cap_min, double cap_max) {
         double cap = (cap_min > 0) ? cap_max : cap_min;
@@ -667,7 +682,9 @@ void minus(const PiecewiseLinearFunction& g) {
         PiecewiseLinearFunction delta = cba_profile(gap, start, end);
         this->sum(delta);
     }
-
+//======================================================================================================
+//======================================  Extract points (x,f(x))   =====================================
+//=======================================================================================================
     std::vector<std::pair<double, double>> to_points_cumulative() const {
         std::vector<std::pair<double, double>> points;
         double y = 0.0;
