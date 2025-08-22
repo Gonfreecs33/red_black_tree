@@ -514,10 +514,11 @@ double eval_delta(double x) const {
     } else {
         Node* left = nullptr;
         Node* right = nullptr;
-        self->findBoundingNodes(self->root, x, left, right);
+        self->findBoundingNodes(self->root, x-0.01, left, right);
 
         double y = this->eval(x);   // eval peut rester const
         double yPrev = left ? this->eval(left->data.x) : 0.0;
+        cout << "eval_delta yprev = "<< yPrev << " y = "<< y <<endl;
         return y - yPrev;
     }
 }
@@ -546,21 +547,136 @@ double eval_delta(double x) const {
 //     }
 // }
 
+// void sum(const RedBlackTree& g) {
+//     auto g_points = g.to_points_delta();
+//     if (g_points.empty()) return;
+
+//     double xg_min = g_points.front().first;
+//     double xg_max = g_points.back().first;
+
+//     auto f_points = this->to_points_compact_bis(xg_min, xg_max);
+
+//     size_t i = 0, j = 0;
+
+//     std::cout << "=== Starting sum ===\n";
+//     std::cout << "g_points size: " << g_points.size() << ", f_points size: " << f_points.size() << "\n";
+
+//     // fusion parallèle
+//     while (i < g_points.size() || j < f_points.size()) {
+//         double x;
+//         bool take_g = false, take_f = false;
+
+//         if (i < g_points.size() && (j >= f_points.size() || g_points[i].first < f_points[j].first)) {
+//             x = g_points[i].first;
+//             take_g = true;
+//             std::cout << "Taking point from g_points: x = " << x << " (i = " << i << ")\n";
+//         } else if (j < f_points.size() && (i >= g_points.size() || f_points[j].first < g_points[i].first)) {
+//             x = f_points[j].first;
+//             take_f = true;
+//             std::cout << "Taking point from f_points: x = " << x << " (j = " << j << ")\n";
+//         } else { // même abscisse
+//             x = g_points[i].first;
+//             take_g = take_f = true;
+//             std::cout << "Points coincide: x = " << x << " (i = " << i << ", j = " << j << ")\n";
+//         }
+
+//         // calcul des deltas
+//         double deltaF = this->eval_delta(x);
+//         double deltaG = g.eval_delta(x);
+//         double delta_sum = deltaF + deltaG;
+
+//         std::cout << "deltaF = " << deltaF << ", deltaG = " << deltaG 
+//                   << ", delta_sum = " << delta_sum << "\n";
+
+//         // --- mise à jour du noeud suivant (right) ---
+//         Node* left = nullptr;
+//         Node* right = nullptr;
+//         findBoundingNodes(root, x+0.01, left, right);
+
+//         // insérer ou mettre à jour dans f
+//         DeltaPoint probe {x, 0.0};
+//         Node* match = search(root, probe);
+
+//         if (match) {
+//             match->data.deltaY = delta_sum;
+//             std::cout << "Updated existing node in f: x = " << x << ", new deltaY = " << match->data.deltaY << "\n";
+//         } else {
+//             this->insert({x, delta_sum});
+//             std::cout << "Inserted new node in f: x = " << x << ", deltaY = " << delta_sum << "\n";
+//         }
+
+
+
+//         if (right) {
+//             right->data.deltaY -= deltaG;
+//             std::cout << "Updated right node: x = " << right->data.x 
+//                       << ", new deltaY = " << right->data.deltaY << "\n";
+//         }
+
+//         // avancer les pointeurs
+//         if (take_g) i++;
+//         if (take_f) j++;
+//     }
+
+
+     
+//        std::cout << "===on s'occupe du dernier noeud ===\n";
+
+//         Node* left = nullptr;
+//         Node* right = nullptr;
+//         findBoundingNodes(root, xg_max+0.01, left, right);
+
+//         if (right) {
+//             double xright = right->data.x;
+//             double F = this->eval(xright);
+//             double G = g.eval(xright);
+//             double sum = F + G;
+//             double yprevf = (left)? this->eval(left->data.x):0;
+//             double delta_sum = sum - yprevf;
+//             right->data.deltaY = delta_sum ;
+//             std::cout << "Updated right node: x = " << right->data.x 
+//                       << ", new deltaY = " << right->data.deltaY << "\n";
+//         }
+
+
+//     std::cout << "=== Sum completed ===\n";
+// }
+
 void sum(const RedBlackTree& g) {
     auto g_points = g.to_points_delta();
     if (g_points.empty()) return;
-
+    auto f = *this;
     double xg_min = g_points.front().first;
     double xg_max = g_points.back().first;
+    double yi_prec = 0;
 
     auto f_points = this->to_points_compact_bis(xg_min, xg_max);
 
     size_t i = 0, j = 0;
 
+    // correction du noeud right (après x)
+    Node* left1 = nullptr;
+    Node* right1 = nullptr;
+    findBoundingNodes(root, xg_min-0.01, left1, right1);
+    if (right1) {
+        yi_prec  =  f.eval(left1->data.x);
+        cout<< "un noeud de f à gauche de g trouve" <<endl;
+        cout<< " fisrt yi = "<< yi_prec <<endl;
+        cout<< " fisrt xi = "<< left1->data.x <<endl;
+    }        
+ 
+
+    // --- Phase 1 : on prépare les opérations ---
+    struct Operation {
+        enum Type { Insert, Update } type;
+        double x;
+        double delta;
+    };
+    std::vector<Operation> ops;
+
     std::cout << "=== Starting sum ===\n";
     std::cout << "g_points size: " << g_points.size() << ", f_points size: " << f_points.size() << "\n";
 
-    // fusion parallèle
     while (i < g_points.size() || j < f_points.size()) {
         double x;
         bool take_g = false, take_f = false;
@@ -568,284 +684,209 @@ void sum(const RedBlackTree& g) {
         if (i < g_points.size() && (j >= f_points.size() || g_points[i].first < f_points[j].first)) {
             x = g_points[i].first;
             take_g = true;
-            std::cout << "Taking point from g_points: x = " << x << " (i = " << i << ")\n";
         } else if (j < f_points.size() && (i >= g_points.size() || f_points[j].first < g_points[i].first)) {
             x = f_points[j].first;
             take_f = true;
-            std::cout << "Taking point from f_points: x = " << x << " (j = " << j << ")\n";
         } else { // même abscisse
             x = g_points[i].first;
             take_g = take_f = true;
-            std::cout << "Points coincide: x = " << x << " (i = " << i << ", j = " << j << ")\n";
         }
 
         // calcul des deltas
-        double deltaF = this->eval_delta(x);
-        double deltaG = g.eval_delta(x);
-        double delta_sum = deltaF + deltaG;
+        double F = f.eval(x);
+        double G = g.eval(x);
+        double sum = F + G;
 
-        std::cout << "deltaF = " << deltaF << ", deltaG = " << deltaG 
-                  << ", delta_sum = " << delta_sum << "\n";
+        std::cout << "x = " << x 
+                  << " | F = " << F << ", G = " << G 
+                  << " -> sum = " << sum << "\n";
+        double delta_sum = sum-yi_prec;
 
-        // --- mise à jour du noeud suivant (right) ---
-        Node* left = nullptr;
-        Node* right = nullptr;
-        findBoundingNodes(root, x+0.01, left, right);
+        std::cout << "yi+1 = " << sum
+        << " | yi = " << yi_prec << endl; 
+        yi_prec = sum;
 
-        // insérer ou mettre à jour dans f
-        DeltaPoint probe {x, 0.0};
-        Node* match = search(root, probe);
-
+        Node* match = search(root, DeltaPoint{x, 0.0});
         if (match) {
-            match->data.deltaY = delta_sum;
-            std::cout << "Updated existing node in f: x = " << x << ", new deltaY = " << match->data.deltaY << "\n";
+            ops.push_back({Operation::Update, x, delta_sum});
         } else {
-            this->insert({x, delta_sum});
-            std::cout << "Inserted new node in f: x = " << x << ", deltaY = " << delta_sum << "\n";
+            ops.push_back({Operation::Insert, x, delta_sum});
         }
 
+        // // correction du noeud right (après x)
+        // Node* left = nullptr;
+        // Node* right = nullptr;
+        // findBoundingNodes(root, x+0.01, left, right);
+        // if (right) {
+        //     ops.push_back({Operation::Update, right->data.x, right->data.deltaY - deltaG});
+        // }
 
-
-        if (right) {
-            right->data.deltaY -= deltaG;
-            std::cout << "Updated right node: x = " << right->data.x 
-                      << ", new deltaY = " << right->data.deltaY << "\n";
-        }
-
-        // avancer les pointeurs
         if (take_g) i++;
         if (take_f) j++;
     }
 
 
-     
-       std::cout << "===on s'occupe du dernier noeud ===\n";
 
-        Node* left = nullptr;
-        Node* right = nullptr;
-        findBoundingNodes(root, xg_max+0.01, left, right);
+    // --- Phase 2 : traiter le dernier noeud ---
+    std::cout << "=== Handling last node ===\n";
+    Node* left = nullptr;
+    Node* right = nullptr;
+    findBoundingNodes(root, xg_max+0.01, left, right);
 
-        if (right) {
-            double xright = right->data.x;
-            double F = this->eval(xright);
-            double G = g.eval(xright);
-            double sum = F + G;
-            double yprevf = (left)? this->eval(left->data.x):0;
-            double delta_sum = sum - yprevf;
-            right->data.deltaY = delta_sum ;
-            std::cout << "Updated right node: x = " << right->data.x 
-                      << ", new deltaY = " << right->data.deltaY << "\n";
+
+    if (right) {
+        double xright = right->data.x;
+        double F = f.eval(xright);
+        double G = g.eval(xright);
+        cout << " F = "<< F << " G " << G << endl;
+        double sum = F + G;
+        cout << "yprev  = "<< yi_prec << endl;
+        cout << "y  = "<< sum << endl;
+        double delta_sum = sum - yi_prec;
+        right->data.deltaY = delta_sum ;
+        std::cout << "Updated right node: x = " << right->data.x 
+                  << ", new deltaY = " << right->data.deltaY << "\n";
+    
+    } 
+
+
+
+
+        // --- Phase 3 : on applique les opérations ---
+        std::cout << "=== Applying operations ===\n";
+        for (auto& op : ops) {
+            if (op.type == Operation::Insert) {
+                this->insert({op.x, op.delta});
+                std::cout << "Inserted node: x = " << op.x << ", deltaY = " << op.delta << "\n";
+            } else {
+                Node* match = search(root, DeltaPoint{op.x, 0.0});
+                if (match) {
+                    match->data.deltaY = op.delta;
+                    std::cout << "Updated node: x = " << op.x << ", new deltaY = " << op.delta << "\n";
+                }
+            }
         }
 
+    
 
     std::cout << "=== Sum completed ===\n";
 }
 
 
-// // méthode sum : f = f + g
-// void sum(const RedBlackTree& g) {
-//      // ... insérer des points dans f ...
-//     auto g_points = g.to_points_delta();
-//     double xg_max = g_points.back().first;
-//     double xg_min = g_points[0].first; 
-//     auto f_points  = this->to_points_compact_bis(xg_min,xg_max);
-//     double delta_sum = 0;
-//     int j = 0;
+void minus(const RedBlackTree& g) {
+    auto g_points = g.to_points_delta();
+    if (g_points.empty()) return;
+    auto f = *this; // copie snapshot
+    double xg_min = g_points.front().first;
+    double xg_max = g_points.back().first;
+    double yi_prec = 0;
 
-//     for (size_t i = 0; i < g_points.size(); ++i) {
+    auto f_points = this->to_points_compact_bis(xg_min, xg_max);
 
-//         auto& g_point = g_points[i];
-//         double x = g_point.first;
+    size_t i = 0, j = 0;
 
-//         auto& f_point = f_points[j]; 
+    // Chercher un noeud de f à gauche de g pour initialiser yi_prec
+    Node* left1 = nullptr;
+    Node* right1 = nullptr;
+    findBoundingNodes(root, xg_min-0.01, left1, right1);
+    if (left1) {
+        yi_prec  = f.eval(left1->data.x);
+        std::cout << "un noeud de f à gauche de g trouvé\n";
+        std::cout << " first yi = " << yi_prec << "\n";
+        std::cout << " first xi = " << left1->data.x << "\n";
+    }
 
-//         if (f_points.empty()) {
-//             std::cout << "WARNING: f_points is vide" << std::endl;
-//             return;
-//         }
-//         if (j < 0 || j >= f_points.size()) {
-//             std::cout << "WARNING: j hors bornes (j=" << j 
-//                       << ", taille=" << f_points.size() << ")" << std::endl;
-//             return;
-//         }
-        
-//        // auto& f_point = f_points[j];
-//         std::cout << "f_point.first = " << f_point.first << std::endl;
-//         cout << " f_point first = " <<  f_point.first<< endl;
-//         double xf = f_point.first;//f_point.first;
-//         auto& nextg_point = g_points[i+1];
+    // --- Phase 1 : préparation des opérations ---
+    struct Operation {
+        enum Type { Insert, Update } type;
+        double x;
+        double delta;
+    };
+    std::vector<Operation> ops;
 
+    std::cout << "=== Starting minus ===\n";
+    std::cout << "g_points size: " << g_points.size() 
+              << ", f_points size: " << f_points.size() << "\n";
 
-//         cout<< "node : " << x << endl;
-//         double deltaG = g_point.second;
-//         DeltaPoint probe {x, 0.0};
+    while (i < g_points.size() || j < f_points.size()) {
+        double x;
+        bool take_g = false, take_f = false;
 
-//         // Trouver le dernier point de f avant x (i.e., x_prev)
-//         Node* left = nullptr;
-//         Node* right = nullptr;
-//         findBoundingNodes(root, x, left, right);
+        if (i < g_points.size() && (j >= f_points.size() || g_points[i].first < f_points[j].first)) {
+            x = g_points[i].first;
+            take_g = true;
+        } else if (j < f_points.size() && (i >= g_points.size() || f_points[j].first < g_points[i].first)) {
+            x = f_points[j].first;
+            take_f = true;
+        } else { // même abscisse
+            x = g_points[i].first;
+            take_g = take_f = true;
+        }
 
-//         Node* match = search(root, probe);
-//         std::cout<< "looking for a match !!" << std::endl;
-//         if (match) {
-//             std::cout<< "match trouve  !!" << std::endl;
-//              // Si x existe déjà dans f, on additionne les deltas
-//             match->data.deltaY += deltaG;
-//             delta_sum = match->data.deltaY;
-//         } else {
+        // calcul F - G
+        double F = f.eval(x);
+        double G = g.eval(x);
+        double diff = F - G;
 
-//             // x n'existe pas dans f, calculer deltaF à x
-//             std::cout<< "node not matched !!" << std::endl;
-//             double y = this->eval(x);
-//             std::cout<< "evaluation de f en x = "<< x<< " , f(x) = "<< y << std::endl;
+        std::cout << "x = " << x 
+                  << " | F = " << F << ", G = " << G 
+                  << " -> diff = " << diff << "\n";
 
-//             double yPrev = left ? this->eval(left->data.x) : 0.0;
-//             std::cout<< "yprev de f ="<< yPrev << std::endl;
-//             double deltaF = y - yPrev;
+        double delta_diff = diff - yi_prec;
+        std::cout << "yi+1 = " << diff
+                  << " | yi = " << yi_prec << "\n";
+        yi_prec = diff;
 
-//             std::cout<< " new deltaF  = " << y -yPrev << std::endl;
+        Node* match = search(root, DeltaPoint{x, 0.0});
+        if (match) {
+            ops.push_back({Operation::Update, x, delta_diff});
+        } else {
+            ops.push_back({Operation::Insert, x, delta_diff});
+        }
 
-//             delta_sum =  deltaF + deltaG ;      
-//             this->insert({x, delta_sum}); //insert new point
+        if (take_g) i++;
+        if (take_f) j++;
+    }
 
-//          }
+    // --- Phase 2 : traiter le dernier noeud ---
+    std::cout << "=== Handling last node ===\n";
+    Node* left = nullptr;
+    Node* right = nullptr;
+    findBoundingNodes(root, xg_max+0.01, left, right);
 
-//         // // Trouver le dernier point de f avant x (i.e., x_prev)
-//         // Node* left = nullptr;
-//         // Node* right = nullptr;
-//         // findBoundingNodes(root, x, left, right);
-//         if(right){ 
-//             // Suivant
-//             cout << "segmentation ? a" << endl;
-//             std::cout<< " right x = " << right->data.x << " , deltay  =  "<< right->data.deltaY  << std::endl;
-//             right->data.deltaY -= delta_sum ; //update delta of next point
-//             std::cout<< "delta right update = "<<  right->data.deltaY << std::endl;
-            
-//         }
+    if (right) {
+        double xright = right->data.x;
+        double F = f.eval(xright);
+        double G = g.eval(xright);
+        std::cout << " F = " << F << " G = " << G << "\n";
+        double diff = F - G;
+        std::cout << "yprev  = " << yi_prec << "\n";
+        std::cout << "y  = " << diff << "\n";
+        double delta_diff = diff - yi_prec;
+        right->data.deltaY = delta_diff;
+        std::cout << "Updated right node: x = " << right->data.x 
+                  << ", new deltaY = " << right->data.deltaY << "\n";
+    }
 
-//         bool inter_point  =  true ;
-//         while(inter_point){
-//             std::cout<< "coucou 0 " << std::endl;
+    // --- Phase 3 : appliquer les opérations ---
+    std::cout << "=== Applying operations ===\n";
+    for (auto& op : ops) {
+        if (op.type == Operation::Insert) {
+            this->insert({op.x, op.delta});
+            std::cout << "Inserted node: x = " << op.x 
+                      << ", deltaY = " << op.delta << "\n";
+        } else {
+            Node* match = search(root, DeltaPoint{op.x, 0.0});
+            if (match) {
+                match->data.deltaY = op.delta;
+                std::cout << "Updated node: x = " << op.x 
+                          << ", new deltaY = " << op.delta << "\n";
+            }
+        }
+    }
 
-
-//             std::cout<< "coucou 1.0 " << std::endl;
-//             if(xf < nextg_point.first){ 
-//                 double yg = g.eval(xf);
-//                 std::cout<< "coucou 1 " << std::endl;
-
-//                 // Trouver le dernier point de f avant x (i.e., x_prev)
-//                 Node* left1 = nullptr;
-//                 Node* right1 = nullptr;
-//                 findBoundingNodes(g.root, xf, left1, right1);
-//                 std::cout<< "coucou 1 " << std::endl;
-
-
-//                 double ygPrev = left1 ? g.eval(left1->data.x) : 0.0;
-//                 std::cout<< "coucou 2 " << std::endl;
-
-//                 std::cout<< "ygprev de g ="<< ygPrev << std::endl;
-//                 double deltaG = yg - ygPrev;
-
-//                 std::cout<< " new deltaF  = " << yg -ygPrev << std::endl;
-//                 double deltaf = f_point.second;
-//                 delta_sum =  deltaf+ deltaG ;  
-//                 DeltaPoint probe1 {xf, 0.0};
-//                 j+=1;
-//                 Node* match1 = search(root, probe1);
-//                 if(match1){
-//                     match1->data.deltaY = delta_sum;
-                   
-
-//                     if(right){ 
-//                         // Suivant
-//                         cout << "segmentation ? a" << endl;
-//                         std::cout<< " right x = " << right->data.x << " , deltay  =  "<< right->data.deltaY  << std::endl;
-//                         right->data.deltaY -= delta_sum ; //update delta of next point
-//                         std::cout<< "delta right update = "<<  right->data.deltaY << std::endl;
-                        
-//                     }
-
-
-//                 }
-           
-
-//             }else{inter_point = false;}
-              
-
-
-
-
-//         //std::cout << "(" << p.first << ", " << p.second << ")" << std::endl;
-//     }
-
-// }
-
-// }
-
-// void sum(const RedBlackTree<T>& g) {
-//     function<void(typename RedBlackTree<T>::Node*)> process = [&](typename RedBlackTree<T>::Node* node) {
-//         if (!node) return;
-//         process(node->left);
-
-//         double x = node->data.x;
-//         cout<< "node : " << x << endl;
-//         double deltaG = node->data.deltaY;
-
-//         Node* match = search(root, node->data);
-//         std::cout<< "looking for a match !!" << std::endl;
-//         if (match) {
-//             std::cout<< "match trouve  !!" << std::endl;
-//              // Si x existe déjà dans f, on additionne les deltas
-//             match->data.deltaY += deltaG;
-//         } else {
-//             // x n'existe pas dans f, calculer deltaF à x
-//             std::cout<< "node not matched !!" << std::endl;
-//             double y = this->eval(x);
-//             std::cout<< "evaluation de f en x = "<< x<< " , f(x) = "<< y << std::endl;
-            
-//             // Trouver le dernier point de f avant x (i.e., x_prev)
-//             Node* left = nullptr;
-//             Node* right = nullptr;
-//             findBoundingNodes(root, x, left, right);
-
-//             double yPrev = left ? this->eval(left->data.x) : 0.0;
-//             std::cout<< "yprev de f ="<< yPrev << std::endl;
-//             double deltaF = y - yPrev;
-
-//             std::cout<< " new deltaF  = " << y -yPrev << std::endl;
-            
-//             double delta_sum =  deltaF + deltaG ;      
-//             this->insert({x, delta_sum}); //insert new point
-//             if(right){ 
-
-//                 Node* leftg = nullptr;
-//                 Node* rightg = nullptr;
-//                 findBoundingNodes(g.root, x, leftg, rightg);
-//                 cout << "segmentation ? " << endl;
-//                 if(rightg){
-//                     cout << "segmentation ? a" << endl;
-//                         std::cout<< " right x = " << right->data.x << " , deltay  =  "<< right->data.deltaY  << std::endl;
-//                         right->data.deltaY -= delta_sum ; //update delta of next point
-//                         std::cout<< "delta right update = "<<  right->data.deltaY << std::endl;
-//                     }else{
-//                         cout << "segmentation ? b " << endl;
-//                         double gx = g.eval(right->data.x);
-//                         cout << "segmentation ? c " << endl;
-//                         double fx = this->eval(right->data.x);
-
-//                         right->data.deltaY = gx + fx - g.eval(x)  ;
-
-//                     }
-                 
-//                             }
-//             std::cout<< " insertion x = " << x << " , deltay  =  "<< delta_sum  << std::endl;
-//         }
-
-//         process(node->right);
-//     };
-
-//     process(g.root);
-// }
+    std::cout << "=== Minus completed ===\n";
+}
 
 void minus(const RedBlackTree<T>& g){
     function<void(typename RedBlackTree<T>::Node*)> process = [&](typename RedBlackTree<T>::Node* node) {
