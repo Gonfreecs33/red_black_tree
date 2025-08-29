@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 
 X, Y = [], []
-with open("/home/mseck/Desktop/red_black_tree-1/cbr_function.txt") as f:
+with open("kmax.txt") as f:
     for line in f:
         x, y = map(float, line.strip().split())
         X.append(x)

@@ -13,12 +13,12 @@
 void printFunction(const PiecewiseLinearFunction& f, const std::string& name) {
     std::cout << "--- " << name << " ---" << std::endl;
     std::cout << "f(" << 0.0 << ") = " << f.evaluate(0.0) << std::endl;
-    std::cout << "f(" << 1.0 << ") = " << f.evaluate(1.0) << std::endl;
-    std::cout << "f(" << 2.0 << ") = " << f.evaluate(2.0) << std::endl;
-    std::cout << "f(" << 3.0 << ") = " << f.evaluate(3.0) << std::endl;
-    std::cout << "f(" << 4.0 << ") = " << f.evaluate(4.0) << std::endl;
-    std::cout << "f(" << 5.0 << ") = " << f.evaluate(5.0) << std::endl;
-    std::cout << "f(" << 6.0 << ") = " << f.evaluate(6.0) << std::endl;
+    std::cout << "f(" << 2 << ") = " << f.evaluate(2) << std::endl;
+    std::cout << "f(" << 4 << ") = " << f.evaluate(4) << std::endl;
+    std::cout << "f(" << 10 << ") = " << f.evaluate(10) << std::endl;
+    std::cout << "f(" << 20 << ") = " << f.evaluate(20) << std::endl;
+    std::cout << "f(" << 28 << ") = " << f.evaluate(28) << std::endl;
+    std::cout << "f(" << 30 << ") = " << f.evaluate(30) << std::endl;
     std::cout << std::endl;
 }
 
@@ -30,44 +30,61 @@ int main() {
     printFunction(f, "Fonction f");
 
     std::cout << "--- OPERATIONS SUR LES FONCTIONS ---" << std::endl;
-    PiecewiseLinearFunction g; // g(0) = 0
-    g.addBreakpoint(3, 0);
-    g.addBreakpoint(5, -10);
-    g.addBreakpoint(7, 10);
-    printFunction(g, "Fonction g");
+    PiecewiseLinearFunction g1; // g(0) = 0
+    g1.addBreakpoint(2, 0);
+    g1.addBreakpoint(4, -10);
 
-    g.sum(f);
-    printFunction(g, "Fonction f+g");
+    PiecewiseLinearFunction g2; // g(0) = 0
+    g2.addBreakpoint(20, 0);
+    g2.addBreakpoint(22, -10);
 
-    std::cout << "--- MIN/MAX AVEC UNE CONSTANTE ---" << std::endl;
-    PiecewiseLinearFunction f2(2);
-    f2.addBreakpoint(2.0, 5);
-    f2.addBreakpoint(4.0, -7.0);
-    f2.addBreakpoint(6.0, -5.0);
-    printFunction(f2, "Fonction f2 (avant min)");
-    f2.maxfunction(5);
-    printFunction(f2, "Fonction min(f2, 2.5)");
+    PiecewiseLinearFunction f1;
+    f1.addBreakpoint(0, 0);
+    f1.addBreakpoint(10, 60);
 
-    std::cout << "--- EVALUATION MIN/MAX SUR UN INTERVALLE ---" << std::endl;
-    std::cout << "Min de f2 sur [0, 5]: " << f2.evaluate_min(0, 5) << std::endl;
-    std::cout << "Max de f2 sur [0, 5]: " << f2.evaluate_max(0, 5) << std::endl;
-    std::cout << std::endl;
+    PiecewiseLinearFunction f2; 
+    f2.addBreakpoint(20, 0);
+    f2.addBreakpoint(28, 48);
 
-    std::cout << "--- TEST DES UPDATES CBR ---" << std::endl;
-    PiecewiseLinearFunction cbr_func;
-    cbr_func.addBreakpoint(5.0, 10.0);
-    cbr_func.addBreakpoint(10.0, -10.0);
-    printFunction(cbr_func, "Fonction CBR initiale");
+
+
+
+
+    PiecewiseLinearFunction levelmin;
+    PiecewiseLinearFunction levelmax;
+    PiecewiseLinearFunction totalmin;
+    PiecewiseLinearFunction totalmax;
+    levelmin.sum(g1);
+    levelmin.sum(f2);
+    totalmin.sum(g1);
+    totalmin.sum(f2);
+    levelmax.sum(g2);
+    levelmax.sum(f1);
+    totalmax.sum(g2);
+    totalmax.sum(f1);
+
+
+    PiecewiseLinearFunction kmin = levelmin;
+    PiecewiseLinearFunction kmax = levelmax;
+
+    totalmax.negate();
+    totalmin.negate(); 
+
+    kmin.sum(totalmax);
+    kmax.sum(totalmin);
+
+
+    kmin.sum(f1);
+    kmax.sum(f2);
+
+
+
+    printFunction(kmin, " kmin ");
     
-    // Exemple d'utilisation de update_cbr_stmin
-    std::cout << "Mise a jour cbr_stmin..." << std::endl;
-    double stmin_old = 5.0, stmin = 7.0, ctmin = 10.0;
-    double cap_min = -100.0, cap_max = 100.0;
-    cbr_func.update_cbr_stmin(stmin_old, stmin, ctmin, cap_min, cap_max);
-    printFunction(cbr_func, "Apres update_cbr_stmin");
+    printFunction(kmax, " kmax ");
 
     std::cout << "--- EXPORTATION ---" << std::endl;
-    g.exportFunction("cbr_function.txt");
-
+    kmin.exportFunction("kmin.txt");
+    kmax.exportFunction("kmax.txt");
     return 0;
 }

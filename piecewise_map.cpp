@@ -82,86 +82,192 @@ public:
 //==========================              sum/minus f+g /f-g          ==================================
 //======================================================================================================
 
-// Addition de deux fonctions
-    void sum(const PiecewiseLinearFunction& g) {
-        if (g.breakpoints.empty()) return;
+// //Addition de deux fonctions
+//     void sum(const PiecewiseLinearFunction& g) {
+//         if (g.breakpoints.empty()) return;
     
-        double xg_min = g.breakpoints.begin()->first;
-        double xg_max = g.breakpoints.rbegin()->first;
-        double yi_prec = 0.0;
+//         double xg_min = g.breakpoints.begin()->first;
+//         double xg_max = g.breakpoints.rbegin()->first;
+//         double yi_prec = 0.0;
     
-        // bornes utiles de f
-        auto it_f = breakpoints.upper_bound(xg_min);
-        auto end_f = breakpoints.upper_bound(xg_max);
-    
-        auto it_g = g.breakpoints.begin();
+//        // bornes utiles de f
+//         auto it_f = breakpoints.upper_bound(xg_min);
+//         auto end_f = breakpoints.upper_bound(xg_max);
 
-        if (it_f != breakpoints.begin()) {
-            auto prev = it_f;   // copie
-            --prev;           // recule d'un cran
-            yi_prec = this->eval(prev->first);
-            std::cout << "un noeud de f à gauche de g trouvé\n";
-            std::cout << " first yi = " << yi_prec << "\n";
-            std::cout << " first xi = " << prev->first << "\n";
-        }
+
+//         if (end_f != breakpoints.end()) {
+//             std::cout << "end_f->first = " << end_f->first 
+//                     << "   end_f->second = " << end_f->second << std::endl;
+//         } else {
+//             std::cout << "end_f == breakpoints.end()" << std::endl;}
     
-        struct Operation {
-            enum Type { Insert, Update } type;
-            double x;
-            double delta;
-        };
-        std::vector<Operation> ops;
+//         auto it_g = g.breakpoints.begin();
+
+//         if (it_f != breakpoints.begin()) {
+//             auto prev = it_f;   // copie
+//             --prev;           // recule d'un cran
+//             yi_prec = this->eval(prev->first);
+//             std::cout << "un noeud de f à gauche de g trouvé\n";
+//             std::cout << " first yi = " << yi_prec << "\n";
+//             std::cout << " first xi = " << prev->first << "\n";
+//         }
+
+//         struct Operation {
+//             enum Type { Insert, Update } type;
+//             double x;
+//             double delta;
+//         };
+//         std::vector<Operation> ops;
     
-        std::cout << "=== Starting sum ===\n";
+//         std::cout << "=== Starting sum ===\n";
     
-        while (it_f != end_f || it_g != g.breakpoints.end()) {
-            double x;
-            bool take_f = false, take_g = false;
+//         while (it_f != end_f || it_g != g.breakpoints.end()) {
+//             double x;
+//             bool take_f = false, take_g = false;
     
-            if (it_g != g.breakpoints.end() &&
-                (it_f == end_f || it_g->first < it_f->first)) {
-                x = it_g->first;
-                take_g = true;
-            } else if (it_f != end_f &&
-                       (it_g == g.breakpoints.end() || it_f->first < it_g->first)) {
-                x = it_f->first;
-                take_f = true;
-            } else { // même abscisse
-                x = it_f->first;
-                take_f = take_g = true;
-            }
+//             if (it_g != g.breakpoints.end() &&
+//                 (it_f == end_f || it_g->first < it_f->first)) {
+//                 x = it_g->first;
+//                 take_g = true;
+//             } else if (it_f != end_f &&
+//                        (it_g == g.breakpoints.end() || it_f->first < it_g->first)) {
+//                 x = it_f->first;
+//                 take_f = true;
+//             } else { // même abscisse
+//                 x = it_f->first;
+//                 take_f = take_g = true;
+//             }
+       
+//             double F = this->eval(x);
+//             double G = g.eval(x);
+//             double sum = F + G;
+//             double delta_sum = sum - yi_prec;
+//             yi_prec = sum;
     
-            double F = this->eval(x);
-            double G = g.eval(x);
-            double sum = F + G;
-            double delta_sum = sum - yi_prec;
-            yi_prec = sum;
+//             std::cout << "x=" << x 
+//                       << " | F=" << F << " G=" << G 
+//                       << " -> sum=" << sum 
+//                       << " delta=" << delta_sum << "\n";
     
-            std::cout << "x=" << x 
-                      << " | F=" << F << " G=" << G 
-                      << " -> sum=" << sum 
-                      << " delta=" << delta_sum << "\n";
+//          //   déjà un point à x ?
+//             auto it_match = breakpoints.find(x);
+//             if (it_match != breakpoints.end()) {
+//                 ops.push_back({Operation::Update, x, delta_sum});
+//             } else {
+//                 ops.push_back({Operation::Insert, x, delta_sum});
+//             }
     
-            // déjà un point à x ?
-            auto it_match = breakpoints.find(x);
-            if (it_match != breakpoints.end()) {
-                ops.push_back({Operation::Update, x, delta_sum});
-            } else {
-                ops.push_back({Operation::Insert, x, delta_sum});
-            }
+//             if (take_f) ++it_f;
+//             if (take_g) ++it_g;
+//         }
     
-            if (take_f) ++it_f;
-            if (take_g) ++it_g;
-        }
+//        // Appliquer les opérations
+//         for (auto& op : ops) {
+//             breakpoints[op.x] = op.delta;
+//         }
     
-        // Appliquer les opérations
-        for (auto& op : ops) {
-            breakpoints[op.x] = op.delta;
-        }
+//         std::cout << "=== Sum completed ===\n";
+//     }
     
-        std::cout << "=== Sum completed ===\n";
+
+
+    // Addition de deux fonctions
+void sum(const PiecewiseLinearFunction& g) {
+    if (g.breakpoints.empty()) return;
+
+    double xg_min = g.breakpoints.begin()->first;
+    double xg_max = g.breakpoints.rbegin()->first;
+    double yi_prec = 0.0;
+
+    // it_f commence au premier point de f strictement > xg_min
+    auto it_f = breakpoints.upper_bound(xg_min);
+
+    // ub = premier point de f strictement > xg_max (ou end())
+    auto ub = breakpoints.upper_bound(xg_max);
+
+    // Afficher en toute sécurité le point (s'il existe) qui est > xg_max
+    if (ub != breakpoints.end()) {
+        std::cout << "first f > xg_max: " << ub->first
+                  << "   value = " << ub->second << std::endl;
+    } else {
+        std::cout << "aucun point de f strictement > xg_max (ub == end())\n";
     }
-    
+
+    // end_f doit être one-past-the-element we want to include.
+    // Si ub != end(), on veut INCLURE ub => end_f = next(ub).
+    // Si ub == end(), end_f = end().
+    auto end_f = ub;
+    if (ub != breakpoints.end()) ++end_f;
+
+    auto it_g = g.breakpoints.begin();
+
+    // Vérifier s’il y a un noeud de f juste à gauche de la plage de g
+    if (it_f != breakpoints.begin()) {
+        auto prev = it_f;
+        --prev;
+        yi_prec = this->eval(prev->first);
+        std::cout << "un noeud de f à gauche de g trouvé\n";
+        std::cout << " first yi = " << yi_prec << "\n";
+        std::cout << " first xi = " << prev->first << "\n";
+    }
+
+    struct Operation {
+        enum Type { Insert, Update } type;
+        double x;
+        double delta; // on garde ta sémantique d'origine (delta_sum)
+    };
+    std::vector<Operation> ops;
+
+    std::cout << "=== Starting sum ===\n";
+
+    while (it_f != end_f || it_g != g.breakpoints.end()) {
+        double x;
+        bool take_f = false, take_g = false;
+
+        if (it_g != g.breakpoints.end() &&
+            (it_f == end_f || it_g->first < it_f->first)) {
+            x = it_g->first;
+            take_g = true;
+        } else if (it_f != end_f &&
+                   (it_g == g.breakpoints.end() || it_f->first < it_g->first)) {
+            x = it_f->first;
+            take_f = true;
+        } else { // même abscisse
+            // ici it_f != end_f (sinon la boucle ne serait pas exécutée)
+            x = it_f->first;
+            take_f = take_g = true;
+        }
+
+        double F = this->eval(x);
+        double G = g.eval(x);
+        double sum = F + G;
+        double delta_sum = sum - yi_prec;
+        yi_prec = sum;
+
+        std::cout << "x=" << x 
+                  << " | F=" << F << " G=" << G 
+                  << " -> sum=" << sum 
+                  << " delta=" << delta_sum << "\n";
+
+        // déjà un point à x ?
+        auto it_match = breakpoints.find(x);
+        if (it_match != breakpoints.end()) {
+            ops.push_back({Operation::Update, x, delta_sum});
+        } else {
+            ops.push_back({Operation::Insert, x, delta_sum});
+        }
+
+        if (take_f) ++it_f;
+        if (take_g) ++it_g;
+    }
+
+    // Appliquer les opérations (même sémantique qu'avant)
+    for (auto& op : ops) {
+        breakpoints[op.x] = op.delta;
+    }
+
+    std::cout << "=== Sum completed ===\n";
+}
 
 
     
